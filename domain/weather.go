@@ -9,4 +9,5 @@ type Weather struct {
 		SensacionTermica float64 `json:"feels_like"`
 		Humedad          int `json:"humidity"`
 	} `json:"main"`
+	Ciudad string `json:"name"`
 }
