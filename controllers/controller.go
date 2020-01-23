@@ -42,3 +42,13 @@ func Location(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, location)
 }
+
+func Weather(c *gin.Context) {
+	weather, err := services.GetWeather()
+	if err != nil {
+		response := domain.Response{Mensaje: err.Error()}
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+	c.JSON(http.StatusOK, weather)
+}

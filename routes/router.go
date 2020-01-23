@@ -11,6 +11,7 @@ func MapRoutes() {
 	router.GET("/ping", controllers.Ping)
 	router.GET("/ip", controllers.IP)
 	router.GET("/location", controllers.Location)
+	router.GET("/weather", controllers.Weather)
 }
 
 func Run() {
