@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
-	"math"
 )
 
 var apiKey string = "b64966af79891ad1f90c85de924bbe10"
@@ -41,11 +40,6 @@ func GetLocation() (domain.Location, error) {
 	return location, nil
 }
 
-func toCelsius(a float64) float64 {
-	a = (a-32)/1.8 // to celsius
-	return math.Round(a*10)/10 // rounded to 1 decimal
-}
-
 func GetWeather() (domain.Weather, error) {
 	location, err := GetLocation()
 	var weather domain.Weather
@@ -65,7 +59,5 @@ func GetWeather() (domain.Weather, error) {
 		return weather, err;
 	}
 	json.Unmarshal(data, &weather);
-	// weather.Detalle.Temp = toCelsius(weather.Detalle.Temp)
-	// weather.Detalle.SensacionTermica = toCelsius(weather.Detalle.SensacionTermica)
 	return weather, nil
 }
