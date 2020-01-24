@@ -12,7 +12,10 @@ func MapRoutes() {
 	router.GET("/ping", controllers.Ping)
 	router.GET("/ip", controllers.IP)
 	router.GET("/location", controllers.Location)
+	router.GET("/locations", controllers.GetLocations)
+	router.GET("/location/:id", controllers.GetLocationId)
 	router.POST("/location", controllers.PostLocation)
+	router.DELETE("/location/:id", controllers.DeleteLocation)
 }
 
 func Run() {

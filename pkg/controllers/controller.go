@@ -65,3 +65,27 @@ func PostLocation(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, res)
 }
+
+func DeleteLocation(c *gin.Context) {
+	err := services.DeleteLocation(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, domain.Response{Mensaje: "Location not found"})
+		return
+	}
+	c.JSON(http.StatusOK, domain.Response{Mensaje: "Eliminado"})
+
+}
+
+func GetLocations(c *gin.Context) {
+	locations := services.GetLocations()
+	c.JSON(http.StatusOK, locations)
+}
+
+func GetLocationId(c *gin.Context) {
+	location, err := services.GetLocationId(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, domain.Response{Mensaje: "Location not found"})
+		return
+	}
+	c.JSON(http.StatusOK, location)
+}

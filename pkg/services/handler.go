@@ -18,6 +18,7 @@ var poll domain.Poll
 var count = make(map[string]int)
 var total int
 var pollResults domain.Poll
+var locations = make(map[string]domain.Locations)
 
 func GetIP() (string, error) {
 	ip, err := myip.GetMyIP()
@@ -48,16 +49,16 @@ func GetLocation() (domain.Location, error) {
 	return location, nil
 }
 
-func CreateLocation(city, state, country string) (domain.LocationSearch, error) {
-	var locations []domain.LocationSearch
+func CreateLocation(city, state, country string) (domain.Search, error) {
+	var search []domain.Search
 	city = url.QueryEscape(city)
 	state = url.QueryEscape(state)
 	country = url.QueryEscape(country)
-	query := fmt.Sprintf("%s%s%s%s%s", city, ",", state, ",", country)
-	resp, err := http.Get("https://us1.locationiq.com/v1/search.php?key=440d88bc9073b1&q=" + query + "&format=json")
+	url := "https://us1.locationiq.com/v1/search.php?key=440d88bc9073b1&q=" + city + "," + state + "," + country + "&format=json"
+	resp, err := http.Get(url)
 	if err != nil {
 		err = errors.New("Error al buscar la localización")
-		return locations[0], err
+		return search[0], err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
@@ -65,7 +66,37 @@ func CreateLocation(city, state, country string) (domain.LocationSearch, error) 
 		if err != nil {
 			log.Fatal(err)
 		}
-		json.Unmarshal(data, &locations)
+		json.Unmarshal(data, &search)
+
+		aux := domain.Locations{
+			Name: search[0].Name,
+			Lat:  search[0].Lat,
+			Lon:  search[0].Lon,
+		}
+		locations[search[0].Id] = aux
 	}
-	return locations[0], nil
+	return search[0], nil
+}
+
+func DeleteLocation(id string) error {
+	_, ok := locations[id]
+	if ok {
+		delete(locations, id)
+		return nil
+	}
+	return errors.New("Failed to delete location")
+}
+
+func GetLocations() map[string]domain.Locations {
+	return locations
+}
+
+func GetLocationId(id string) (domain.Locations, error) {
+	location, ok := locations[id]
+	fmt.Println(location)
+	if ok {
+		return location, nil
+	}
+	return location, errors.New("Failed to delete location")
+
 }

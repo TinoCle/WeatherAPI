@@ -1,6 +1,8 @@
 package main
 
-import "TPFinal/pkg/routes"
+import (
+	"TPFinal/pkg/routes"
+)
 
 func main() {
 	routes.MapRoutes()
