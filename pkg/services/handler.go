@@ -2,6 +2,7 @@ package services
 
 import (
 	"TPFinal/pkg/domain"
+	"TPFinal/pkg/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,10 +15,6 @@ import (
 )
 
 //API KEY: 440d88bc9073b1
-var poll domain.Poll
-var count = make(map[string]int)
-var total int
-var pollResults domain.Poll
 var locations = make(map[string]domain.Locations)
 
 func GetIP() (string, error) {
@@ -74,29 +71,51 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 			Lon:  search[0].Lon,
 		}
 		locations[search[0].Id] = aux
+		utils.SaveDB(locations)
 	}
 	return search[0], nil
 }
 
 func DeleteLocation(id string) error {
+	locations = utils.ReadDB()
 	_, ok := locations[id]
 	if ok {
 		delete(locations, id)
+		utils.SaveDB(locations)
 		return nil
 	}
 	return errors.New("Failed to delete location")
 }
 
 func GetLocations() map[string]domain.Locations {
+	locations = utils.ReadDB()
 	return locations
 }
 
 func GetLocationId(id string) (domain.Locations, error) {
+	locations = utils.ReadDB()
 	location, ok := locations[id]
-	fmt.Println(location)
 	if ok {
 		return location, nil
 	}
 	return location, errors.New("Failed to delete location")
+}
 
+func UpdateLocation(id, lat, lon string) (domain.Locations, error) {
+	locations = utils.ReadDB()
+	_, ok := locations[id]
+	if ok {
+		fmt.Println("UPDATING LOCATION")
+		var x = locations[id]
+		x.Lat = lat
+		x.Lon = lon
+		locations[id] = x
+		jsonString, err := json.Marshal(locations)
+		if err != nil {
+			return locations[id], errors.New(err.Error())
+		}
+		_ = ioutil.WriteFile("db.json", jsonString, 0644)
+		return locations[id], nil
+	}
+	return locations[id], errors.New("Couldn't update location")
 }

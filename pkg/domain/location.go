@@ -9,8 +9,13 @@ type Search struct {
 }
 
 type Locations struct {
-	Id   string `json:"id"`
 	Name string `json:"name"`
 	Lat  string `json:"lat"`
 	Lon  string `json:"lon"`
+}
+
+type UpdateLocation struct {
+	Id  string `json:"id"`
+	Lat string `json:"lat"`
+	Lon string `json:"lon"`
 }

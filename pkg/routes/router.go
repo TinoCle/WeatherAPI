@@ -16,6 +16,7 @@ func MapRoutes() {
 	router.GET("/location/:id", controllers.GetLocationId)
 	router.POST("/location", controllers.PostLocation)
 	router.DELETE("/location/:id", controllers.DeleteLocation)
+	router.PUT("/location", controllers.UpdateLocation)
 }
 
 func Run() {

@@ -3,6 +3,7 @@ package controllers
 import (
 	"TPFinal/pkg/domain"
 	"TPFinal/pkg/services"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -88,4 +89,21 @@ func GetLocationId(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, location)
+}
+
+func UpdateLocation(c *gin.Context) {
+	var body domain.UpdateLocation
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response := domain.Response{Mensaje: err.Error()}
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	fmt.Println(body)
+	res, err := services.UpdateLocation(body.Id, body.Lat, body.Lon)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "ni idea que pasó")
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
