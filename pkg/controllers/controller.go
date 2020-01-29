@@ -3,9 +3,10 @@ package controllers
 import (
 	"TPFinal/pkg/domain"
 	"TPFinal/pkg/services"
-	"net/http"
-	"github.com/gin-gonic/gin"
 	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Setear esta variable en true si la API está hosteada online
@@ -66,7 +67,7 @@ func GetLocations(c *gin.Context) {
 
 //GetLocationID trae una ubicación según su ID
 func GetLocationID(c *gin.Context) {
-	location, err := services.GetLocationId(c.Param("id"))
+	location, err := services.GetLocationID(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusNotFound, domain.Response{Mensaje: "No se encontró la ubicación"})
 		return
@@ -74,7 +75,7 @@ func GetLocationID(c *gin.Context) {
 	c.JSON(http.StatusOK, location)
 }
 
-//PostLocation busca la ubicación del lugar pasado por el body
+//PostLocation busca la localización del lugar pasado por el body
 func PostLocation(c *gin.Context) {
 	var body Body
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -83,14 +84,12 @@ func PostLocation(c *gin.Context) {
 	}
 	res, err := services.CreateLocation(body.City, body.State, body.Country)
 	if err != nil {
-		response := domain.Response{Mensaje: err.Error()}
-		c.JSON(http.StatusInternalServerError, response)
+		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: "La Localización ya se encuentra registrada"})
 		return
 	}
 	c.JSON(http.StatusOK, res)
 }
 
-//DeleteLocation elimina una ubicación de la lista
 func DeleteLocation(c *gin.Context) {
 	err := services.DeleteLocation(c.Param("id"))
 	if err != nil {
@@ -98,12 +97,9 @@ func DeleteLocation(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, domain.Response{Mensaje: "Ubicación eliminada."})
-
 }
-
-//UpdateLocation actualiza una ubicación de la lista
 func UpdateLocation(c *gin.Context) {
-	var body domain.UpdateLocation
+	var body domain.Locations
 
 	if err := c.ShouldBindJSON(&body); err != nil {
 		response := domain.Response{Mensaje: err.Error()}
@@ -111,7 +107,7 @@ func UpdateLocation(c *gin.Context) {
 		return
 	}
 	fmt.Println(body)
-	res, err := services.UpdateLocation(body.Id, body.Lat, body.Lon)
+	res, err := services.UpdateLocation(body.Id, body.Name, body.Lat, body.Lon)
 	if err != nil {
 		response := domain.Response{Mensaje: err.Error()}
 		c.JSON(http.StatusInternalServerError, response)
