@@ -1,12 +1,8 @@
 package main
 
-import (
-	"TPFinal/pkg/routes"
-	"TPFinal/pkg/utils"
-)
+import "TPFinal/pkg/routes"
 
 func main() {
-	utils.InitDb()
 	routes.MapRoutes()
 	routes.Run()
 }
