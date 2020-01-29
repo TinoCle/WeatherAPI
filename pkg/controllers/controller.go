@@ -61,7 +61,7 @@ func PostLocation(c *gin.Context) {
 	}
 	res, err := services.CreateLocation(body.City, body.State, body.Country)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, "ni idea que pasó")
+		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: "La Localización ya se encuentra registrada"})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -74,11 +74,13 @@ func DeleteLocation(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, domain.Response{Mensaje: "Eliminado"})
-
 }
 
 func GetLocations(c *gin.Context) {
-	locations := services.GetLocations()
+	locations, err := services.GetLocations()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
 	c.JSON(http.StatusOK, locations)
 }
 
@@ -92,7 +94,7 @@ func GetLocationId(c *gin.Context) {
 }
 
 func UpdateLocation(c *gin.Context) {
-	var body domain.UpdateLocation
+	var body domain.Locations
 
 	if err := c.ShouldBindJSON(&body); err != nil {
 		response := domain.Response{Mensaje: err.Error()}
@@ -100,9 +102,9 @@ func UpdateLocation(c *gin.Context) {
 		return
 	}
 	fmt.Println(body)
-	res, err := services.UpdateLocation(body.Id, body.Lat, body.Lon)
+	res, err := services.UpdateLocation(body.Id, body.Name, body.Lat, body.Lon)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, "ni idea que pasó")
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	c.JSON(http.StatusOK, res)

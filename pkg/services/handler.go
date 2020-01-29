@@ -5,7 +5,6 @@ import (
 	"TPFinal/pkg/utils"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -46,12 +45,19 @@ func GetLocation() (domain.Location, error) {
 	return location, nil
 }
 
+func cleanQuery(params []string) string {
+	var query string
+	for _, param := range params {
+		query += url.QueryEscape(param) + ","
+	}
+	return query
+}
+
 func CreateLocation(city, state, country string) (domain.Search, error) {
 	var search []domain.Search
-	city = url.QueryEscape(city)
-	state = url.QueryEscape(state)
-	country = url.QueryEscape(country)
-	url := "https://us1.locationiq.com/v1/search.php?key=440d88bc9073b1&q=" + city + "," + state + "," + country + "&format=json"
+	cleaned := []string{city, state, country}
+	query := cleanQuery(cleaned)
+	url := "https://us1.locationiq.com/v1/search.php?key=440d88bc9073b1&q=" + query + "&format=json"
 	resp, err := http.Get(url)
 	if err != nil {
 		err = errors.New("Error al buscar la localización")
@@ -64,58 +70,70 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 			log.Fatal(err)
 		}
 		json.Unmarshal(data, &search)
-
+		_, err = GetLocationId(search[0].Id)
+		if err == nil {
+			return search[0], errors.New("Location already exists")
+		}
 		aux := domain.Locations{
+			Id:   search[0].Id,
 			Name: search[0].Name,
 			Lat:  search[0].Lat,
 			Lon:  search[0].Lon,
 		}
 		locations[search[0].Id] = aux
-		utils.SaveDB(locations)
+		client := utils.GetClient()
+		client.SaveLocation(aux)
+		return search[0], nil
 	}
-	return search[0], nil
+	return search[0], errors.New("Error al buscar la localización")
 }
 
 func DeleteLocation(id string) error {
-	locations = utils.ReadDB()
-	_, ok := locations[id]
-	if ok {
-		delete(locations, id)
-		utils.SaveDB(locations)
-		return nil
+	_, err := GetLocationId(id)
+	if err != nil {
+		return err
 	}
-	return errors.New("Failed to delete location")
+	client := utils.GetClient()
+	err = client.DeleteLocation(id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func GetLocations() map[string]domain.Locations {
-	locations = utils.ReadDB()
-	return locations
+func GetLocations() ([]domain.Locations, error) {
+	client := utils.GetClient()
+	locations, err := client.GetLocations()
+	if err != nil {
+		return locations, err
+	}
+	return locations, nil
 }
 
 func GetLocationId(id string) (domain.Locations, error) {
-	locations = utils.ReadDB()
-	location, ok := locations[id]
-	if ok {
-		return location, nil
+	client := utils.GetClient()
+	location, err := client.GetLocationId(id)
+	if err != nil {
+		return location, errors.New("Location not Found")
 	}
-	return location, errors.New("Failed to delete location")
+	return location, nil
 }
 
-func UpdateLocation(id, lat, lon string) (domain.Locations, error) {
-	locations = utils.ReadDB()
-	_, ok := locations[id]
-	if ok {
-		fmt.Println("UPDATING LOCATION")
-		var x = locations[id]
-		x.Lat = lat
-		x.Lon = lon
-		locations[id] = x
-		jsonString, err := json.Marshal(locations)
-		if err != nil {
-			return locations[id], errors.New(err.Error())
-		}
-		_ = ioutil.WriteFile("db.json", jsonString, 0644)
-		return locations[id], nil
+func UpdateLocation(id, name, lat, lon string) (domain.Locations, error) {
+	location, err := GetLocationId(id)
+	if err != nil {
+		return location, err
 	}
-	return locations[id], errors.New("Couldn't update location")
+	client := utils.GetClient()
+	new := domain.Locations{
+		Id:   location.Id,
+		Name: name,
+		Lat:  lat,
+		Lon:  lon,
+	}
+	newLocation, err := client.SaveLocation(new)
+	if err != nil {
+		return newLocation, errors.New("Couldn't Update Location")
+	}
+	return newLocation, nil
 }
