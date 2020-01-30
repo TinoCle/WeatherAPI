@@ -1,8 +1,8 @@
 package services
 
 import (
-	"TPFinal/pkg/db"
-	"TPFinal/pkg/domain"
+	"WeatherAPI/pkg/db"
+	"WeatherAPI/pkg/domain"
 	"encoding/json"
 	"errors"
 	"io/ioutil"

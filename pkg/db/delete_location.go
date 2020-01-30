@@ -1,7 +1,7 @@
 package db
 
 import (
-	"TPFinal/pkg/domain"
+	"WeatherAPI/pkg/domain"
 )
 
 type deleteLocationJob struct {

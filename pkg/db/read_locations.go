@@ -1,6 +1,6 @@
 package db
 
-import "TPFinal/pkg/domain"
+import "WeatherAPI/pkg/domain"
 
 type readLocationsJob struct {
 	locations chan map[string]domain.Locations

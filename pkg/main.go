@@ -1,8 +1,8 @@
 package main
 
 import (
-	"TPFinal/pkg/routes"
-	"TPFinal/pkg/db"
+	"WeatherAPI/pkg/routes"
+	"WeatherAPI/pkg/db"
 )
 
 func main() {

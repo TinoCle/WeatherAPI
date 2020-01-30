@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"TPFinal/pkg/domain"
-	"TPFinal/pkg/services"
+	"WeatherAPI/pkg/domain"
+	"WeatherAPI/pkg/services"
 	"fmt"
 	"net/http"
 

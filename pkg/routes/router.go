@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"TPFinal/pkg/controllers"
+	"WeatherAPI/pkg/controllers"
 
 	"github.com/gin-gonic/gin"
 )
