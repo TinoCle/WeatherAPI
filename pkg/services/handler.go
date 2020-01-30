@@ -8,11 +8,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-
 	myip "github.com/polds/MyIP"
 )
 
-var weatherApiKey string = "b64966af79891ad1f90c85de924bbe10"
+var weatherAPIKey string = "b64966af79891ad1f90c85de924bbe10"
 var key string = "440d88bc9073b1"
 
 var locations = make(map[string]domain.Locations)
@@ -59,9 +58,9 @@ func GetLocationID(id string) (domain.Locations, error) {
 	client := utils.GetClient()
 	location, err := client.GetLocationId(id)
 	if err != nil {
-		return location, errors.New("Location not Found")
+		err = errors.New("Error al buscar la ubicación")
 	}
-	return location, nil
+	return location, err
 }
 
 func cleanQuery(params []string) string {
@@ -79,20 +78,20 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 	url := "https://us1.locationiq.com/v1/search.php?key=" + key + "&q=" + query + "&format=json"
 	resp, err := http.Get(url)
 	if err != nil {
-		err = errors.New("Error al buscar la localización")
+		err = errors.New("Error al buscar la ubicación")
 		return search[0], err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			err = errors.New("Error al crear la localización")
+			err = errors.New("Error al crear la ubicación")
 			return search[0], err
 		}
 		json.Unmarshal(data, &search)
 		_, err = GetLocationID(search[0].Id)
 		if err == nil {
-			return search[0], errors.New("Location already exists")
+			return search[0], errors.New("la ubicación ya se encuentra en la lista")
 		}
 		aux := domain.Locations{
 			Id:   search[0].Id,
@@ -105,7 +104,7 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 		client.SaveLocation(aux)
 		return search[0], nil
 	}
-	return search[0], errors.New("Error al buscar la localización")
+	return search[0], errors.New("Error al buscar la ubicación")
 }
 
 func DeleteLocation(id string) error {
@@ -152,7 +151,7 @@ func GetWeather() (domain.Weather, error) {
 	url += "lat=" + location.Data.Latitud
 	url += "&lon=" + location.Data.Longitud
 	url += "&units=metric"
-	url += "&appid=" + weatherApiKey
+	url += "&appid=" + weatherAPIKey
 	resp, err2 := http.Get(url)
 	data, err3 := ioutil.ReadAll(resp.Body)
 	if err2 != nil || err3 != nil {
