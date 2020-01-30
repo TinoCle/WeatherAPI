@@ -2,11 +2,11 @@ package main
 
 import (
 	"TPFinal/pkg/routes"
-	"TPFinal/pkg/utils"
+	"TPFinal/pkg/db"
 )
 
 func main() {
-	utils.InitDb()
+	db.InitDb()
 	routes.MapRoutes()
 	routes.Run()
 }

@@ -1,4 +1,4 @@
-package utils
+package db
 
 import (
 	"TPFinal/pkg/domain"
@@ -6,12 +6,12 @@ import (
 	"io/ioutil"
 )
 
-type Job interface {
+type job interface {
 	ExitChan() chan error
 	Run(locations map[string]domain.Locations) (map[string]domain.Locations, error)
 }
 
-func ProcessJobs(jobs chan Job, db string) {
+func processJobs(jobs chan job, db string) {
 	for {
 		j := <-jobs
 		locations := make(map[string]domain.Locations, 0)

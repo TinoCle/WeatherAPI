@@ -1,13 +1,14 @@
 package services
 
 import (
+	"TPFinal/pkg/db"
 	"TPFinal/pkg/domain"
-	"TPFinal/pkg/utils"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
 	myip "github.com/polds/MyIP"
 )
 
@@ -46,8 +47,8 @@ func GetLocation() (domain.Location, error) {
 }
 
 func GetLocations() ([]domain.Locations, error) {
-	client := utils.GetClient()
-	locations, err := client.GetLocations()
+	/* client := db.GetClient() */
+	locations, err := db.GetLocations()
 	if err != nil {
 		return locations, err
 	}
@@ -55,8 +56,7 @@ func GetLocations() ([]domain.Locations, error) {
 }
 
 func GetLocationID(id string) (domain.Locations, error) {
-	client := utils.GetClient()
-	location, err := client.GetLocationId(id)
+	location, err := db.GetLocationID(id)
 	if err != nil {
 		err = errors.New("Error al buscar la ubicación")
 	}
@@ -89,7 +89,7 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 			return search[0], err
 		}
 		json.Unmarshal(data, &search)
-		_, err = GetLocationID(search[0].Id)
+		_, err = db.GetLocationID(search[0].Id)
 		if err == nil {
 			return search[0], errors.New("la ubicación ya se encuentra en la lista")
 		}
@@ -100,40 +100,37 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 			Lon:  search[0].Lon,
 		}
 		locations[search[0].Id] = aux
-		client := utils.GetClient()
-		client.SaveLocation(aux)
+		db.SaveLocation(aux)
 		return search[0], nil
 	}
 	return search[0], errors.New("Error al buscar la ubicación")
 }
 
 func DeleteLocation(id string) error {
-	_, err := GetLocationID(id)
+	_, err := db.GetLocationID(id)
 	if err != nil {
 		return errors.New("Error al borrar la ubicación")
 	}
-	client := utils.GetClient()
-	err = client.DeleteLocation(id)
+	err = db.DeleteLocation(id)
 	if err != nil {
-		return err
+		return errors.New("Error al borrar la ubicación")
 	}
-	return errors.New("Error al borrar la ubicación")
+	return nil
 }
 
 func UpdateLocation(id, name, lat, lon string) (domain.Locations, error) {
-	location, err := GetLocationID(id)
+	location, err := db.GetLocationID(id)
 	if err != nil {
 		var locAux domain.Locations
 		return locAux, errors.New("Error al actualizar la ubicación")
 	}
-	client := utils.GetClient()
 	new := domain.Locations{
 		Id:   location.Id,
 		Name: name,
 		Lat:  lat,
 		Lon:  lon,
 	}
-	newLocation, err := client.SaveLocation(new)
+	newLocation, err := db.SaveLocation(new)
 	if err != nil {
 		return newLocation, errors.New("Couldn't Update Location")
 	}
