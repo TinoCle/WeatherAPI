@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-
+	"sync"
 	myip "github.com/polds/MyIP"
 )
 
@@ -91,7 +91,7 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 		json.Unmarshal(data, &search)
 		_, err = db.GetLocationID(search[0].Id)
 		if err == nil {
-			return search[0], errors.New("la ubicación ya se encuentra en la lista")
+			return search[0], errors.New("La ubicación ya se encuentra en la lista")
 		}
 		aux := domain.Locations{
 			Id:   search[0].Id,
@@ -132,21 +132,27 @@ func UpdateLocation(id, name, lat, lon string) (domain.Locations, error) {
 	}
 	newLocation, err := db.SaveLocation(new)
 	if err != nil {
-		return newLocation, errors.New("Couldn't Update Location")
+		return newLocation, errors.New("Error al actualizar la ubicación")
 	}
 	return newLocation, nil
 }
 
-func GetWeather() (domain.Weather, error) {
-	location, err := GetLocation()
+func GetWeather(lat string, lon string) (domain.Weather, error) {
+	var err error
+	var location domain.Location
 	var weather domain.Weather
+	if lat == "" || lon == "" {
+		location, err = GetLocation()
+		lat = location.Data.Latitud
+		lon = location.Data.Longitud
+	}
 	if err != nil {
 		err = errors.New("Error al obtener su ubicación")
 		return weather, err
 	}
 	var url string = "http://api.openweathermap.org/data/2.5/weather?"
-	url += "lat=" + location.Data.Latitud
-	url += "&lon=" + location.Data.Longitud
+	url += "lat=" + lat
+	url += "&lon=" + lon
 	url += "&units=metric"
 	url += "&appid=" + weatherAPIKey
 	resp, err2 := http.Get(url)
@@ -156,5 +162,29 @@ func GetWeather() (domain.Weather, error) {
 		return weather, err
 	}
 	json.Unmarshal(data, &weather)
+	return weather, nil
+}
+
+func worker(wg *sync.WaitGroup, location domain.Locations, list *[]domain.Weather, index int) {
+	weather, _ := GetWeather(location.Lat, location.Lon) // Obtiene el clima
+	*list = append(*list, weather) 						 // Lo agrega al array
+	defer wg.Done()
+}
+
+func GetAllWeathers() ([]domain.Weather, error){
+	locations, err := GetLocations()
+	var weather []domain.Weather
+	if err != nil {
+		return weather, err
+	}
+	if len(locations) == 0 {
+		return weather, errors.New("No hay ubicaciones cargadas")
+	}
+	var wg sync.WaitGroup
+	for i:=0; i<len(locations); i++ {
+		wg.Add(1)
+		go worker(&wg, locations[i], &weather, i) // Lanzo una goroutine por cada ubicación en la lista
+	}
+	wg.Wait() // Espero a que terminen todas las goroutines
 	return weather, nil
 }

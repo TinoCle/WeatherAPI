@@ -118,11 +118,21 @@ func UpdateLocation(c *gin.Context) {
 
 //GetWeather trae el clima de la ubicación actual
 func GetWeather(c *gin.Context) {
-	weather, err := services.GetWeather()
+	weather, err := services.GetWeather("", "")
 	if err != nil {
 		response := domain.Response{Mensaje: err.Error()}
 		c.JSON(http.StatusInternalServerError, response)
 		return
 	}
 	c.JSON(http.StatusOK, weather)
+}
+
+func GetAllWeathers( c*gin.Context) {
+	weathers, err := services.GetAllWeathers()
+	if err != nil {
+		response := domain.Response{Mensaje: err.Error()}
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+	c.JSON(http.StatusOK, weathers)
 }
