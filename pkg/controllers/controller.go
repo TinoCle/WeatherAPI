@@ -84,7 +84,7 @@ func PostLocation(c *gin.Context) {
 	}
 	res, err := services.CreateLocation(body.City, body.State, body.Country)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: "La Localización ya se encuentra registrada"})
+		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -127,7 +127,17 @@ func GetWeather(c *gin.Context) {
 	c.JSON(http.StatusOK, weather)
 }
 
-func GetAllWeathers( c*gin.Context) {
+func GetWeatherID(c *gin.Context) {
+	weather, err := services.GetWeatherID(c.Param("id"))
+	if err != nil {
+		response := domain.Response{Mensaje: err.Error()}
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+	c.JSON(http.StatusOK, weather)
+}
+
+func GetAllWeathers(c *gin.Context) {
 	weathers, err := services.GetAllWeathers()
 	if err != nil {
 		response := domain.Response{Mensaje: err.Error()}

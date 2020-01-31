@@ -18,6 +18,7 @@ func MapRoutes() {
 	router.DELETE("/location/:id", controllers.DeleteLocation)
 	router.PUT("/location", controllers.UpdateLocation)
 	router.GET("/weather", controllers.GetWeather)
+	router.GET("/weather/:id", controllers.GetWeather)
 	router.GET("/allWeathers", controllers.GetAllWeathers)
 }
 
