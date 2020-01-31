@@ -2,7 +2,6 @@ package db
 
 import (
 	"WeatherAPI/pkg/domain"
-	"errors"
 	"io/ioutil"
 	"log"
 	"sync"
@@ -36,7 +35,7 @@ func InitDb() {
 	})
 }
 
-//GetLocations obtiene todas las ubiaciones guardadas en la base de datos
+//GetLocations obtiene todas las ubicaciones guardadas en la base de datos
 func GetLocations() ([]domain.Locations, error) {
 	arr := make([]domain.Locations, 0)
 	locations, err := getLocationHash()
@@ -52,12 +51,11 @@ func GetLocations() ([]domain.Locations, error) {
 
 //GetLocationID busca la ubicacion de acuerdo al ID
 func GetLocationID(id string) (domain.Locations, error) {
-	location, _ := getLocationHash()
-	_, ok := location[id]
-	if ok {
-		return location[id], nil
+	location, err := getLocationHash()
+	if err != nil {
+		return domain.Locations{}, err
 	}
-	return domain.Locations{}, errors.New("Not Found")
+	return location[id], nil
 }
 
 //SaveLocation guarda o actualiza una ubicación en la db

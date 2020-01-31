@@ -9,13 +9,21 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+
 	myip "github.com/polds/MyIP"
 )
 
-var weatherAPIKey string = "b64966af79891ad1f90c85de924bbe10"
-var key string = "440d88bc9073b1"
-
-var locations = make(map[string]domain.Locations)
+var (
+	//API keys
+	weatherAPIKey  string = "b64966af79891ad1f90c85de924bbe10"
+	locationAPIkey string = "440d88bc9073b1"
+	//errors
+	ErrorLocationNotFound      = errors.New("Ubicación no encontrada")
+	ErrorLocationAlreadyExists = errors.New("La Localización ya se encuentra registrada")
+	ErrorCreateLocation        = errors.New("Error al crear la ubicación")
+	ErrorDeleteLocation        = errors.New("Error al borrar la ubicación")
+	ErrorUpdateLocation        = errors.New("Error al actualizar la ubicación")
+)
 
 func GetIP() (string, error) {
 	ip, err := myip.GetMyIP()
@@ -47,7 +55,6 @@ func GetLocation() (domain.Location, error) {
 }
 
 func GetLocations() ([]domain.Locations, error) {
-	/* client := db.GetClient() */
 	locations, err := db.GetLocations()
 	if err != nil {
 		return locations, err
@@ -58,71 +65,72 @@ func GetLocations() ([]domain.Locations, error) {
 func GetLocationID(id string) (domain.Locations, error) {
 	location, err := db.GetLocationID(id)
 	if err != nil {
-		err = errors.New("Error al buscar la ubicación")
+		return domain.Locations{}, err
 	}
-	return location, err
+	if (domain.Locations{}) == location {
+		return domain.Locations{}, ErrorLocationNotFound
+	}
+	return location, nil
 }
 
-func cleanQuery(params []string) string {
+func getUrl(params []string) string {
 	var query string
 	for _, param := range params {
 		query += url.QueryEscape(param) + ","
 	}
-	return query
+	url := "https://us1.locationiq.com/v1/search.php?key=" + locationAPIkey + "&q=" + query + "&format=json"
+	return url
 }
 
 func CreateLocation(city, state, country string) (domain.Search, error) {
-	var search []domain.Search
-	cleaned := []string{city, state, country}
-	query := cleanQuery(cleaned)
-	url := "https://us1.locationiq.com/v1/search.php?key=" + key + "&q=" + query + "&format=json"
+	url := getUrl([]string{city, state, country})
 	resp, err := http.Get(url)
 	if err != nil {
-		err = errors.New("Error al buscar la ubicación")
-		return search[0], err
+		return domain.Search{}, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			err = errors.New("Error al crear la ubicación")
-			return search[0], err
-		}
-		json.Unmarshal(data, &search)
-		_, err = db.GetLocationID(search[0].Id)
-		if err == nil {
-			return search[0], errors.New("La ubicación ya se encuentra en la lista")
-		}
-		aux := domain.Locations{
-			Id:   search[0].Id,
-			Name: search[0].Name,
-			Lat:  search[0].Lat,
-			Lon:  search[0].Lon,
-		}
-		locations[search[0].Id] = aux
-		db.SaveLocation(aux)
-		return search[0], nil
+	if resp.StatusCode == http.StatusNotFound {
+		return domain.Search{}, ErrorLocationNotFound
 	}
-	return search[0], errors.New("Error al buscar la ubicación")
+	var search []domain.Search
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return domain.Search{}, ErrorCreateLocation
+	}
+	json.Unmarshal(data, &search)
+	_, err = db.GetLocationID(search[0].Id)
+	if err == nil {
+		return domain.Search{}, ErrorLocationAlreadyExists
+	}
+	aux := domain.Locations{
+		Id:   search[0].Id,
+		Name: search[0].Name,
+		Lat:  search[0].Lat,
+		Lon:  search[0].Lon,
+	}
+	_, err = db.SaveLocation(aux)
+	if err != nil {
+		return domain.Search{}, ErrorCreateLocation
+	}
+	return search[0], nil
 }
 
 func DeleteLocation(id string) error {
-	_, err := db.GetLocationID(id)
+	_, err := GetLocationID(id)
 	if err != nil {
-		return errors.New("Error al borrar la ubicación")
+		return ErrorLocationNotFound
 	}
 	err = db.DeleteLocation(id)
 	if err != nil {
-		return errors.New("Error al borrar la ubicación")
+		return ErrorDeleteLocation
 	}
 	return nil
 }
 
 func UpdateLocation(id, name, lat, lon string) (domain.Locations, error) {
-	location, err := db.GetLocationID(id)
+	location, err := GetLocationID(id)
 	if err != nil {
-		var locAux domain.Locations
-		return locAux, errors.New("Error al actualizar la ubicación")
+		return domain.Locations{}, ErrorLocationNotFound
 	}
 	new := domain.Locations{
 		Id:   location.Id,
@@ -132,7 +140,7 @@ func UpdateLocation(id, name, lat, lon string) (domain.Locations, error) {
 	}
 	newLocation, err := db.SaveLocation(new)
 	if err != nil {
-		return newLocation, errors.New("Error al actualizar la ubicación")
+		return domain.Locations{}, ErrorUpdateLocation
 	}
 	return newLocation, nil
 }
@@ -165,13 +173,25 @@ func GetWeather(lat string, lon string) (domain.Weather, error) {
 	return weather, nil
 }
 
+func GetWeatherID(id string) (domain.Weather, error) {
+	location, err := GetLocationID(id)
+	if err != nil {
+		return domain.Weather{}, ErrorLocationNotFound
+	}
+	weather, err := GetWeather(location.Lat, location.Lon)
+	if err != nil {
+		return weather, err
+	}
+	return weather, nil
+}
+
 func worker(wg *sync.WaitGroup, location domain.Locations, list *[]domain.Weather, index int) {
 	weather, _ := GetWeather(location.Lat, location.Lon) // Obtiene el clima
-	*list = append(*list, weather) 						 // Lo agrega al array
+	*list = append(*list, weather)                       // Lo agrega al array
 	defer wg.Done()
 }
 
-func GetAllWeathers() ([]domain.Weather, error){
+func GetAllWeathers() ([]domain.Weather, error) {
 	locations, err := GetLocations()
 	var weather []domain.Weather
 	if err != nil {
@@ -181,7 +201,7 @@ func GetAllWeathers() ([]domain.Weather, error){
 		return weather, errors.New("No hay ubicaciones cargadas")
 	}
 	var wg sync.WaitGroup
-	for i:=0; i<len(locations); i++ {
+	for i := 0; i < len(locations); i++ {
 		wg.Add(1)
 		go worker(&wg, locations[i], &weather, i) // Lanzo una goroutine por cada ubicación en la lista
 	}

@@ -3,7 +3,6 @@ package controllers
 import (
 	"WeatherAPI/pkg/domain"
 	"WeatherAPI/pkg/services"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -55,8 +54,8 @@ func GetLocation(c *gin.Context) {
 func GetLocations(c *gin.Context) {
 	locations, err := services.GetLocations()
 	if err != nil {
-		response := domain.Response{Mensaje: err.Error()}
-		c.JSON(http.StatusInternalServerError, response)
+		apiErr := ParseError(err)
+		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	} else if len(locations) == 0 {
 		c.JSON(http.StatusOK, domain.Response{Mensaje: "No hay ubicaciones cargadas."})
@@ -69,7 +68,8 @@ func GetLocations(c *gin.Context) {
 func GetLocationID(c *gin.Context) {
 	location, err := services.GetLocationID(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, domain.Response{Mensaje: "No se encontró la ubicación"})
+		apiErr := ParseError(err)
+		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, location)
@@ -84,7 +84,8 @@ func PostLocation(c *gin.Context) {
 	}
 	res, err := services.CreateLocation(body.City, body.State, body.Country)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: err.Error()})
+		apiErr := ParseError(err)
+		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -93,24 +94,24 @@ func PostLocation(c *gin.Context) {
 func DeleteLocation(c *gin.Context) {
 	err := services.DeleteLocation(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, domain.Response{Mensaje: "Ubicación no encontrada."})
+		apiErr := ParseError(err)
+		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, domain.Response{Mensaje: "Ubicación eliminada."})
 }
 func UpdateLocation(c *gin.Context) {
 	var body domain.Locations
-
 	if err := c.ShouldBindJSON(&body); err != nil {
 		response := domain.Response{Mensaje: err.Error()}
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	fmt.Println(body)
 	res, err := services.UpdateLocation(body.Id, body.Name, body.Lat, body.Lon)
 	if err != nil {
-		response := domain.Response{Mensaje: err.Error()}
-		c.JSON(http.StatusInternalServerError, response)
+		apiErr := ParseError(err)
+		response := domain.Response{Mensaje: apiErr.Message}
+		c.JSON(apiErr.Status, response)
 		return
 	}
 	c.JSON(http.StatusOK, res)
