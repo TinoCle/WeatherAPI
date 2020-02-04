@@ -5,10 +5,13 @@ import (
 	"WeatherAPI/pkg/domain"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	myip "github.com/polds/MyIP"
 )
@@ -17,55 +20,62 @@ var (
 	//API keys
 	weatherAPIKey  string = "b64966af79891ad1f90c85de924bbe10"
 	locationAPIkey string = "440d88bc9073b1"
+
+	myClient = &http.Client{Timeout: 10 * time.Second}
 	//errors
 	ErrorLocationNotFound      = errors.New("Ubicación no encontrada")
 	ErrorLocationAlreadyExists = errors.New("La Localización ya se encuentra registrada")
 	ErrorCreateLocation        = errors.New("Error al crear la ubicación")
 	ErrorDeleteLocation        = errors.New("Error al borrar la ubicación")
 	ErrorUpdateLocation        = errors.New("Error al actualizar la ubicación")
+	ErrorDB                    = errors.New("Error al obtener los datos de la base de datos")
+	ErrorGetIP                 = errors.New("Error al obtener su IP")
+	ErrorGetLocation           = errors.New("Error al obtener su ubicación")
+	ErrorNoLocations           = errors.New("No hay ubicaciones cargadas")
 )
 
+//GetIP obtiene la dirección IP desde donde se lanzó la petición
 func GetIP() (string, error) {
 	ip, err := myip.GetMyIP()
 	if err != nil {
-		err = errors.New("Error al obtener su IP")
+		return "", ErrorGetIP
 	}
-	return ip[:len(ip)-2], err
+	return ip[:len(ip)-2], nil
 }
 
+//GetLocation obtiene la ubicación de la IP desde donde se manda la request
 func GetLocation() (domain.Location, error) {
 	ip, err := GetIP()
 	var location domain.Location
 	if err != nil {
-		err = errors.New("Error al obtener su IP")
-		return location, err
+		return domain.Location{}, ErrorGetIP
 	}
 	resp, err2 := http.Get("http://ipvigilante.com/" + ip)
 	data, err3 := ioutil.ReadAll(resp.Body)
 	if err2 != nil || err3 != nil {
-		err = errors.New("Error al obtener su ubicación")
-		return location, err
+		return location, ErrorGetLocation
 	}
 	json.Unmarshal(data, &location)
 	if location.Status != "success" {
-		err = errors.New("Error al obtener su ubicación")
-		return location, err
+		return location, ErrorGetLocation
 	}
 	return location, nil
 }
 
+//GetLocations obtiene todas las ubicaciones guardadas en la base de datos
 func GetLocations() ([]domain.Locations, error) {
 	locations, err := db.GetLocations()
 	if err != nil {
-		return locations, err
+		return locations, ErrorDB
 	}
 	return locations, nil
 }
 
+//GetLocationID obtiene una ubicación según su ID
 func GetLocationID(id string) (domain.Locations, error) {
 	location, err := db.GetLocationID(id)
 	if err != nil {
-		return domain.Locations{}, err
+		return domain.Locations{}, ErrorDB
 	}
 	if (domain.Locations{}) == location {
 		return domain.Locations{}, ErrorLocationNotFound
@@ -73,7 +83,7 @@ func GetLocationID(id string) (domain.Locations, error) {
 	return location, nil
 }
 
-func getUrl(params []string) string {
+func getURL(params []string) string {
 	var query string
 	for _, param := range params {
 		query += url.QueryEscape(param) + ","
@@ -82,25 +92,46 @@ func getUrl(params []string) string {
 	return url
 }
 
-func CreateLocation(city, state, country string) (domain.Search, error) {
-	url := getUrl([]string{city, state, country})
-	resp, err := http.Get(url)
-	if err != nil {
-		return domain.Search{}, err
+func makeAPICall(url string) ([]domain.Search, error) {
+	var (
+		err     error
+		resp    *http.Response
+		retries = 5
+	)
+	for retries > 0 {
+		resp, err = myClient.Get(url)
+		if resp.StatusCode == 429 {
+			time.Sleep(2 * time.Second)
+			retries--
+		} else if resp.StatusCode == http.StatusNotFound {
+			return []domain.Search{}, ErrorLocationNotFound
+		} else if err != nil {
+			log.Fatalln(err)
+			return []domain.Search{}, err
+		} else {
+			break
+		}
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return domain.Search{}, ErrorLocationNotFound
-	}
+	body, err := ioutil.ReadAll(resp.Body)
 	var search []domain.Search
-	data, err := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(body, &search)
 	if err != nil {
-		return domain.Search{}, ErrorCreateLocation
+		fmt.Println("fail unmarshall")
+		return []domain.Search{}, ErrorCreateLocation
 	}
-	json.Unmarshal(data, &search)
-	_, err = db.GetLocationID(search[0].Id)
+	return search, nil
+}
+
+//CreateLocation guarda una nueva ubicación en la base de datos si ya no se encuentra registrada
+func CreateLocation(city, state, country string) (domain.Locations, error) {
+	url := getURL([]string{city, state, country})
+	search, err := makeAPICall(url)
+	if err != nil {
+		return domain.Locations{}, err
+	}
+	location, err := GetLocationID(search[0].Id)
 	if err == nil {
-		return domain.Search{}, ErrorLocationAlreadyExists
+		return location, ErrorLocationAlreadyExists
 	}
 	aux := domain.Locations{
 		Id:   search[0].Id,
@@ -110,15 +141,17 @@ func CreateLocation(city, state, country string) (domain.Search, error) {
 	}
 	_, err = db.SaveLocation(aux)
 	if err != nil {
-		return domain.Search{}, ErrorCreateLocation
+		fmt.Println(err.Error())
+		return domain.Locations{}, ErrorCreateLocation
 	}
-	return search[0], nil
+	return location, nil
 }
 
+//DeleteLocation borra una ubicación de la base de datos según su ID
 func DeleteLocation(id string) error {
 	_, err := GetLocationID(id)
 	if err != nil {
-		return ErrorLocationNotFound
+		return err
 	}
 	err = db.DeleteLocation(id)
 	if err != nil {
@@ -127,10 +160,11 @@ func DeleteLocation(id string) error {
 	return nil
 }
 
+//UpdateLocation actualiza una ubicación de la base de datos según su ID
 func UpdateLocation(id, name, lat, lon string) (domain.Locations, error) {
 	location, err := GetLocationID(id)
 	if err != nil {
-		return domain.Locations{}, ErrorLocationNotFound
+		return domain.Locations{}, err
 	}
 	new := domain.Locations{
 		Id:   location.Id,
@@ -176,7 +210,7 @@ func GetWeather(lat string, lon string) (domain.Weather, error) {
 func GetWeatherID(id string) (domain.Weather, error) {
 	location, err := GetLocationID(id)
 	if err != nil {
-		return domain.Weather{}, ErrorLocationNotFound
+		return domain.Weather{}, err
 	}
 	weather, err := GetWeather(location.Lat, location.Lon)
 	if err != nil {
@@ -198,7 +232,7 @@ func GetAllWeathers() ([]domain.Weather, error) {
 		return weather, err
 	}
 	if len(locations) == 0 {
-		return weather, errors.New("No hay ubicaciones cargadas")
+		return weather, ErrorNoLocations
 	}
 	var wg sync.WaitGroup
 	for i := 0; i < len(locations); i++ {
