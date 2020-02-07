@@ -106,3 +106,51 @@ func TestCreateExistentLocation(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestUpdateLocationFound(t *testing.T) {
+	aux := domain.Locations{
+		Id:   "333086313822",
+		Name: "Córdoba, Capital (Córdoba), Cordoba, Argentina",
+		Lat:  "-31.4135",
+		Lon:  "-64.18105",
+	}
+	db.SaveLocation(aux)
+	expected := domain.Locations{
+		Id:   "333086313822",
+		Name: "Córdoba Capital, Córdoba, Argentina",
+		Lat:  "31.4135",
+		Lon:  "64.18105",
+	}
+	location, err := UpdateLocation(aux.Id, expected.Name, expected.Lat, expected.Lon)
+	if err != nil {
+		t.Fail()
+	}
+	if location != expected {
+		t.Fail()
+	}
+}
+
+func TestUpdateLocationNotFound(t *testing.T) {
+	id := "idUntraceable"
+	_, err := UpdateLocation(id, "", "", "")
+	if err == nil {
+		t.Fail()
+	}
+}
+
+func TestGetWeatherIDNoLocation(t *testing.T) {
+	id := "idUntraceable"
+	_, err := GetWeatherID(id)
+	if err != ErrorLocationNotFound {
+		t.Fail()
+	}
+}
+
+func TestGetWeatherIDLocationFound(t *testing.T) {
+	city, state, country := "Chicago", "Illinois", "USA"
+	location, _ := CreateLocation(city, state, country)
+	_, err := GetWeatherID(location.Id)
+	if err != nil {
+		t.Fail()
+	}
+}
