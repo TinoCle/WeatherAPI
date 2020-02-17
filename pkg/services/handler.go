@@ -24,7 +24,7 @@ var (
 	myClient = &http.Client{Timeout: 10 * time.Second}
 	//errors
 	ErrorLocationNotFound      = errors.New("Ubicación no encontrada")
-	ErrorLocationAlreadyExists = errors.New("La Localización ya se encuentra registrada")
+	ErrorLocationAlreadyExists = errors.New("La ubicación ya se encuentra registrada")
 	ErrorCreateLocation        = errors.New("Error al crear la ubicación")
 	ErrorDeleteLocation        = errors.New("Error al borrar la ubicación")
 	ErrorUpdateLocation        = errors.New("Error al actualizar la ubicación")

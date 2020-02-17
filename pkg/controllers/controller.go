@@ -4,7 +4,6 @@ import (
 	"WeatherAPI/pkg/domain"
 	"WeatherAPI/pkg/services"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -58,7 +57,7 @@ func GetLocations(c *gin.Context) {
 		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	} else if len(locations) == 0 {
-		c.JSON(http.StatusOK, domain.Response{Mensaje: "No hay ubicaciones cargadas."})
+		c.JSON(http.StatusNotFound, domain.Response{Mensaje: "No hay ubicaciones cargadas"})
 		return
 	}
 	c.JSON(http.StatusOK, locations)
@@ -79,16 +78,16 @@ func GetLocationID(c *gin.Context) {
 func PostLocation(c *gin.Context) {
 	var body Body
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: "Json inválido."})
+		c.JSON(http.StatusBadRequest, domain.Response{Mensaje: "JSON inválido"})
 		return
 	}
-	res, err := services.CreateLocation(body.City, body.State, body.Country)
+	_, err := services.CreateLocation(body.City, body.State, body.Country)
 	if err != nil {
 		apiErr := ParseError(err)
 		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	}
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusCreated, domain.Response{Mensaje: "Ubicación agregada con éxito"})
 }
 
 func DeleteLocation(c *gin.Context) {
@@ -98,7 +97,7 @@ func DeleteLocation(c *gin.Context) {
 		c.JSON(apiErr.Status, domain.Response{Mensaje: apiErr.Message})
 		return
 	}
-	c.JSON(http.StatusOK, domain.Response{Mensaje: "Ubicación eliminada."})
+	c.JSON(http.StatusNoContent, nil)
 }
 func UpdateLocation(c *gin.Context) {
 	var body domain.Locations
@@ -107,14 +106,14 @@ func UpdateLocation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	res, err := services.UpdateLocation(body.Id, body.Name, body.Lat, body.Lon)
+	_, err := services.UpdateLocation(body.Id, body.Name, body.Lat, body.Lon)
 	if err != nil {
 		apiErr := ParseError(err)
 		response := domain.Response{Mensaje: apiErr.Message}
 		c.JSON(apiErr.Status, response)
 		return
 	}
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusOK, domain.Response{Mensaje: "Ubicación actualizada con éxito"})
 }
 
 //GetWeather trae el clima de la ubicación actual
