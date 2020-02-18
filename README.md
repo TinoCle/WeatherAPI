@@ -145,7 +145,7 @@ Luego se puede consultar en simultáneo la información climática para toda la 
 
 |  | OK | Ubicación existente  | Datos inválidos|
 |--|--|--|--|
-| Response code | 201 | 400 | 404 |
+| Response code | 201 | 400 | 400 |
 | Response body| 1* | 2* | 3* |
 
 **Response body: (1)**
