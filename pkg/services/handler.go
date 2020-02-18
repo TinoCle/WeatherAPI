@@ -116,7 +116,6 @@ func makeAPICall(url string) ([]domain.Search, error) {
 	var search []domain.Search
 	err = json.Unmarshal(body, &search)
 	if err != nil {
-		fmt.Println("fail unmarshall")
 		return []domain.Search{}, ErrorCreateLocation
 	}
 	return search, nil
